@@ -548,19 +548,20 @@ async function exportZipStreamFromFile(file, baseName) {
 		// 选择输出目标：优先使用 File System Access API，其次使用 StreamSaver
 		let writable
 		let sink = ""
-		if ("showSaveFilePicker" in window) {
-			const handle = await window.showSaveFilePicker({
-				suggestedName: `${baseName}-images.zip`,
-				types: [{ description: "ZIP Archive", accept: { "application/zip": [".zip"] } }]
-			})
-			const fsWritable = await handle.createWritable()
-			writable = {
-				write: (chunk) => fsWritable.write(chunk),
-				close: () => fsWritable.close(),
-				abort: () => fsWritable.abort()
-			}
-			sink = "fsa"
-		} else if (window.streamSaver && streamSaver.createWriteStream) {
+		// if ("showSaveFilePicker" in window) {
+		// 	const handle = await window.showSaveFilePicker({
+		// 		suggestedName: `${baseName}-images.zip`,
+		// 		types: [{ description: "ZIP Archive", accept: { "application/zip": [".zip"] } }]
+		// 	})
+		// 	const fsWritable = await handle.createWritable()
+		// 	writable = {
+		// 		write: (chunk) => fsWritable.write(chunk),
+		// 		close: () => fsWritable.close(),
+		// 		abort: () => fsWritable.abort()
+		// 	}
+		// 	sink = "fsa"
+		// } else 
+		if (window.streamSaver && streamSaver.createWriteStream) {
 			try { if (!streamSaver.mitm) streamSaver.mitm = new URL('./mitm.html?version=2.0.0', location).href } catch {}
 			const fileStream = streamSaver.createWriteStream(`${baseName}-images.zip`)
 			const writer = fileStream.getWriter()
