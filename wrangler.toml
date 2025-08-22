@@ -2,4 +2,4 @@ name = "pdf-to-png"
 compatibility_date = "2024-05-30"
 
 [assets]
-directory = "./pdf-to-png"   # path relative to wrangler.toml
+directory = "./"   # path relative to wrangler.toml
