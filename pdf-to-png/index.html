@@ -460,32 +460,25 @@ async function renderPageToPNGBlob(pdf, i) {
 			page.destroy(); page = null
 
 			let blob
-			// 检查是否在iframe中以及OffscreenCanvas的可用性
-			const isInIframe = window !== window.top
-			const useOffscreenCanvas = typeof OffscreenCanvas !== "undefined" && !isInIframe
-			
-			if (useOffscreenCanvas) {
-				try {
-					const off = new OffscreenCanvas(width, height)
-					const ctx = off.getContext("2d")
-					if (!ctx) throw new Error("Failed to get OffscreenCanvas context")
-					const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height)
-					ctx.putImageData(imageData, 0, 0)
-					blob = await off.convertToBlob({ type: "image/png" })
-					if (!blob) throw new Error("OffscreenCanvas convertToBlob returned null")
-					// 显示当前处理的图片预览
-					updateImagePreview(off)
-				} catch (offscreenError) {
-					console.warn("OffscreenCanvas failed, falling back to regular canvas:", offscreenError)
-					// 回退到普通canvas
-					blob = await createBlobWithCanvas(width, height, pixels)
-				}
+			if (typeof OffscreenCanvas !== "undefined") {
+				const off = new OffscreenCanvas(width, height)
+				const ctx = off.getContext("2d")
+				const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height)
+				ctx.putImageData(imageData, 0, 0)
+				blob = await off.convertToBlob({ type: "image/png" })
+				// 显示当前处理的图片预览
+				updateImagePreview(off)
 			} else {
-				blob = await createBlobWithCanvas(width, height, pixels)
-			}
-			
-			if (!blob) {
-				throw new Error("Failed to create PNG blob")
+				const canvas = document.createElement("canvas")
+				canvas.width = width
+				canvas.height = height
+				const ctx = canvas.getContext("2d")
+				const imageData = ctx.createImageData(width, height)
+				imageData.data.set(pixels)
+				ctx.putImageData(imageData, 0, 0)
+				blob = await new Promise(res => canvas.toBlob(res, "image/png"))
+				// 显示当前处理的图片预览
+				updateImagePreview(canvas)
 			}
 			return blob
 		} catch (e) {
@@ -495,30 +488,6 @@ async function renderPageToPNGBlob(pdf, i) {
 			throw e
 		}
 	}
-}
-
-// 使用普通Canvas创建Blob的辅助函数
-async function createBlobWithCanvas(width, height, pixels) {
-	const canvas = document.createElement("canvas")
-	canvas.width = width
-	canvas.height = height
-	const ctx = canvas.getContext("2d")
-	if (!ctx) throw new Error("Failed to get canvas context")
-	const imageData = ctx.createImageData(width, height)
-	imageData.data.set(pixels)
-	ctx.putImageData(imageData, 0, 0)
-	const blob = await new Promise((resolve, reject) => {
-		canvas.toBlob((result) => {
-			if (result) {
-				resolve(result)
-			} else {
-				reject(new Error("Canvas toBlob failed"))
-			}
-		}, "image/png")
-	})
-	// 显示当前处理的图片预览
-	updateImagePreview(canvas)
-	return blob
 }
 
 // 更新图片预览（注意资源回收）
@@ -531,60 +500,35 @@ function updateImagePreview(canvas) {
 		URL.revokeObjectURL(currentImage.src)
 	}
 	
-	try {
-		// 处理 OffscreenCanvas 和普通 Canvas 的兼容性
-		if (canvas instanceof OffscreenCanvas) {
-			// OffscreenCanvas 使用 convertToBlob 方法
-			canvas.convertToBlob({ type: 'image/png', quality: 0.8 }).then(blob => {
-				if (blob) {
-					try {
-						const url = URL.createObjectURL(blob)
-						currentImage.src = url
-						currentImage.style.display = 'block'
-						// 设置定时器清理 URL（5秒后）
-						setTimeout(() => {
-							try {
-								URL.revokeObjectURL(url)
-							} catch (e) {
-								console.warn('Failed to revoke URL:', e)
-							}
-						}, 5000)
-					} catch (e) {
-						console.warn('Failed to create object URL from OffscreenCanvas blob:', e)
-					}
-				}
-			}).catch(err => {
-				console.warn('OffscreenCanvas convertToBlob failed:', err)
-				// 在iframe环境中，OffscreenCanvas可能不可用，这是正常的
-			})
-		} else if (canvas && typeof canvas.toBlob === 'function') {
-			// 普通 Canvas 使用 toBlob 方法
-			canvas.toBlob(blob => {
-				if (blob) {
-					try {
-						const url = URL.createObjectURL(blob)
-						currentImage.src = url
-						currentImage.style.display = 'block'
-						// 设置定时器清理 URL（5秒后）
-						setTimeout(() => {
-							try {
-								URL.revokeObjectURL(url)
-							} catch (e) {
-								console.warn('Failed to revoke URL:', e)
-							}
-						}, 5000)
-					} catch (e) {
-						console.warn('Failed to create object URL from canvas blob:', e)
-					}
-				} else {
-					console.warn('Canvas toBlob returned null')
-				}
-			}, 'image/png', 0.8)
-		} else {
-			console.warn('Invalid canvas object for preview update')
-		}
-	} catch (e) {
-		console.warn('Error in updateImagePreview:', e)
+	// 处理 OffscreenCanvas 和普通 Canvas 的兼容性
+	if (canvas instanceof OffscreenCanvas) {
+		// OffscreenCanvas 使用 convertToBlob 方法
+		canvas.convertToBlob({ type: 'image/png', quality: 0.8 }).then(blob => {
+			if (blob) {
+				const url = URL.createObjectURL(blob)
+				currentImage.src = url
+				currentImage.style.display = 'block'
+				// 设置定时器清理 URL（5秒后）
+				setTimeout(() => {
+					URL.revokeObjectURL(url)
+				}, 5000)
+			}
+		}).catch(err => {
+			console.warn('OffscreenCanvas convertToBlob failed:', err)
+		})
+	} else {
+		// 普通 Canvas 使用 toBlob 方法
+		canvas.toBlob(blob => {
+			if (blob) {
+				const url = URL.createObjectURL(blob)
+				currentImage.src = url
+				currentImage.style.display = 'block'
+				// 设置定时器清理 URL（5秒后）
+				setTimeout(() => {
+					URL.revokeObjectURL(url)
+				}, 5000)
+			}
+		}, 'image/png', 0.8)
 	}
 }
 
