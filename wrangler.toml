@@ -2,8 +2,8 @@ name = "pdf-to-png"
 compatibility_date = "2024-05-30"
 
 [site]
-# 静态资源目录，相对 wrangler.toml
 bucket = "pdf-to-png"
-
-# 如果无需自定义 Worker 逻辑，可省略 entry-point；保留便于将来扩展。
 entry-point = "."
+
+[assets]
+directory = "./dist"   # path relative to wrangler.toml
