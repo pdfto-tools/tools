@@ -1,9 +1,5 @@
 name = "pdf-to-png"
 compatibility_date = "2024-05-30"
 
-[site]
-bucket = "pdf-to-png"
-entry-point = "."
-
 [assets]
-directory = "./dist"   # path relative to wrangler.toml
+directory = "./pdf-to-png"   # path relative to wrangler.toml
