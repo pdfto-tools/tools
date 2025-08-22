@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<title>PDF to PNG Converter</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+
+<style>
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: #ffffff;
+	color: #333333;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	margin: 0;
+	padding: 20px;
+}
+
+.container {
+	max-width: 600px;
+	width: 100%;
+	background: #ffffff;
+	margin: 0 auto;
+}
+
+
+
+#toolbar {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	align-items: center;
+}
+
+.drop-zone {
+	width: 100%;
+	height: 400px;
+	border: 2px dashed #ddd;
+	border-radius: 12px;
+	background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	position: relative;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+	padding: 24px;
+	box-sizing: border-box;
+	gap: 16px;
+}
+
+.drop-zone:hover {
+	border-color: #4285f4;
+	background: #f0f7ff;
+}
+
+.drop-zone.drag-over {
+	border-color: #4285f4;
+	background: #e3f2fd;
+	transform: scale(1.02);
+}
+
+.file-input-wrapper {
+	position: relative;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	text-align: center;
+}
+
+#fileInput {
+	position: absolute;
+	left: -9999px;
+}
+
+.file-input-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	padding: 16px 32px;
+	background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+	color: white;
+	border: none;
+	border-radius: 12px;
+	font-size: 16px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 10px rgba(66, 133, 244, 0.3);
+}
+
+.file-input-label:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 20px rgba(66, 133, 244, 0.4);
+}
+
+.file-input-label:active {
+	transform: translateY(0);
+}
+
+.drop-hint {
+	font-size: 14px;
+	color: #888;
+	text-align: center;
+	margin-top: 12px;
+	font-weight: 400;
+	opacity: 0.8;
+}
+
+.drop-zone.drag-over {
+	border-color: #007bff;
+	background: linear-gradient(135deg, rgba(0, 123, 255, 0.08) 0%, rgba(0, 123, 255, 0.03) 100%);
+	transform: scale(1.01);
+	box-shadow: 0 4px 16px rgba(0, 123, 255, 0.15);
+	transition: all 0.3s ease;
+}
+
+.action-buttons {
+	display: flex;
+	gap: 16px;
+	justify-content: center;
+}
+
+button {
+	padding: 12px 28px;
+	border: none;
+	border-radius: 8px;
+	font-size: 15px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	position: relative;
+	overflow: hidden;
+	letter-spacing: 0.3px;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+#startBtn {
+	background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+	color: white;
+	box-shadow: 0 2px 10px rgba(25, 118, 210, 0.3);
+	border: 1px solid rgba(255,255,255,0.1);
+}
+
+#startBtn:hover {
+	background: linear-gradient(135deg, #218838 0%, #1ea085 100%);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+#startBtn:disabled {
+	background: #e0e0e0;
+	color: #999999;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+#cancelBtn {
+	background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+	color: white;
+	box-shadow: 0 2px 10px rgba(244, 67, 54, 0.3);
+	border: 1px solid rgba(255,255,255,0.1);
+}
+
+#cancelBtn:hover {
+	background: linear-gradient(135deg, #c82333 0%, #dc2626 100%);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+#progressContainer {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+	margin-bottom: 20px;
+}
+
+#previewContainer {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	max-width: 280px;
+	border-radius: 8px;
+	overflow: hidden;
+	margin: 0;
+}
+
+#currentImage {
+	width: 280px;
+	height: 200px;
+	border-radius: 12px;
+	object-fit: contain;
+	background: transparent;
+	display: none;
+	border: none;
+}
+
+#progressInfo {
+	width: 280px;
+	background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+	padding: 14px 20px;
+	border-radius: 0 0 8px 8px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	min-width: 200px;
+	border-top: 1px solid #e9ecef;
+}
+
+#progress {
+	width: 180px;
+	height: 6px;
+	border-radius: 3px;
+	background: #f1f3f4;
+	border: none;
+	overflow: hidden;
+	box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+#progress::-webkit-progress-bar {
+	background: #f0f0f0;
+	border-radius: 4px;
+}
+
+#progress::-webkit-progress-value {
+	background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+	border-radius: 3px;
+	transition: width 0.4s ease;
+	box-shadow: 0 1px 3px rgba(66, 133, 244, 0.3);
+}
+
+#progress::-moz-progress-bar {
+	background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+	border-radius: 3px;
+	box-shadow: 0 1px 3px rgba(66, 133, 244, 0.3);
+}
+
+#progressText {
+	font-size: 13px;
+	color: #333;
+	font-weight: 600;
+	text-align: center;
+}
+
+#log {
+	display: none;
+}
+
+button[hidden], input[hidden], div[hidden] {
+	display: none !important;
+}
+
+@media (max-width: 640px) {
+	.container {
+		padding: 30px 20px;
+	}
+	
+	.title {
+		font-size: 24px;
+	}
+	
+	.action-buttons {
+		flex-direction: column;
+		width: 100%;
+	}
+	
+	button {
+		width: 100%;
+	}
+	
+	.file-input-label {
+		width: 100%;
+		justify-content: center;
+	}
+}
+</style>
+
+<!-- StreamSaver fallback (for browsers without File System Access API) -->
+<script src="https://cdn.jsdelivr.net/npm/streamsaver@2.0.6/StreamSaver.min.js"></script>
+
+<script type="module">
+"use strict"
+
+import * as mupdf from "https://cdn.jsdelivr.net/npm/mupdf@1.26.4/dist/mupdf.js"
+import { Zip, AsyncZipDeflate } from "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js"
+
+// 控制导出流程（支持Cancel）
+const exportCtrl = { running: false, cancel: false, reader: null, writable: null, zip: null }
+window.selectedFile = null
+
+function getBaseName(fileName) {
+	const name = fileName.replace(/\.[^.]+$/, "")
+	return name.replace(/\.pages(\b|$)/i, "-pages")
+}
+
+function setStatus(text) {
+	// 不再显示累计日志，只更新进度文本
+	const progressText = document.getElementById("progressText")
+	if (progressText && text) {
+		progressText.textContent = text
+	}
+}
+
+function setProgress(value, max) {
+	const prog = document.getElementById("progress")
+	if (!prog) return
+	if (max != null) prog.max = max
+	if (value != null) prog.value = value
+}
+
+function log(text) {
+	// 不再显示累计日志
+	return
+}
+
+window.openFile = async function openFile(file) {
+	if (!file) {
+		// 重置界面到初始状态
+		window.selectedFile = null
+		const fileInputWrapper = document.getElementById("fileInputWrapper")
+		const startBtn = document.getElementById("startBtn")
+		const cancelBtn = document.getElementById("cancelBtn")
+		const progressContainer = document.getElementById("progressContainer")
+		const fileInfo = document.getElementById("fileInfo")
+		if (fileInputWrapper) fileInputWrapper.style.display = 'flex'
+		if (startBtn) startBtn.hidden = true
+		if (cancelBtn) cancelBtn.hidden = true
+		if (progressContainer) progressContainer.hidden = true
+		if (fileInfo) fileInfo.style.display = 'none'
+		return
+	}
+	window.selectedFile = file
+	
+	// 显示文件信息
+	const fileInfo = document.getElementById("fileInfo")
+	const fileName = document.getElementById("fileName")
+	if (fileName) fileName.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+	if (fileInfo) fileInfo.style.display = 'block'
+	
+	setStatus(`File selected: ${file.name}`)
+	// 隐藏文件选择按钮，显示操作按钮
+	const fileInputWrapper = document.getElementById("fileInputWrapper")
+	const startBtn = document.getElementById("startBtn")
+	const cancelBtn = document.getElementById("cancelBtn")
+	if (fileInputWrapper) fileInputWrapper.style.display = 'none'
+	if (startBtn) { 
+		startBtn.hidden = false
+		startBtn.disabled = false
+		startBtn.textContent = "Save and Export"
+		startBtn.focus()
+	}
+	if (cancelBtn) cancelBtn.hidden = false
+}
+
+window.startExport = async function startExport() {
+	const file = window.selectedFile
+	if (!file) { alert("Please select a PDF file first"); return }
+	// 在按钮点击（用户激活）内启动保存对话框和导出
+	try {
+		const baseName = getBaseName(file.name)
+		const startBtn = document.getElementById("startBtn")
+		const cancelBtn = document.getElementById("cancelBtn")
+		const progressContainer = document.getElementById("progressContainer")
+		
+		// 设置按钮状态：开始按钮禁用，Cancel按钮可用
+		if (startBtn) {
+			startBtn.disabled = true
+			startBtn.textContent = "Exporting..."
+			startBtn.style.opacity = "0.6"
+			startBtn.style.cursor = "not-allowed"
+		}
+		if (cancelBtn) {
+			cancelBtn.disabled = false
+			cancelBtn.style.opacity = "1"
+			cancelBtn.style.cursor = "pointer"
+		}
+		if (progressContainer) progressContainer.hidden = false
+		
+		await exportZipStreamFromFile(file, baseName)
+	} catch (e) {
+		console.error(e)
+		setStatus("Export failed: " + (e && e.message ? e.message : e))
+		// 出错时立即重置
+		resetAfterExport()
+	}
+	// 成功完成时不立即重置，让完成提示显示一段时间
+}
+
+function resetAfterExport() {
+	const fileInputWrapper = document.getElementById("fileInputWrapper")
+	const fileInput = document.getElementById("fileInput")
+	const startBtn = document.getElementById("startBtn")
+	const cancelBtn = document.getElementById("cancelBtn")
+	const progressContainer = document.getElementById("progressContainer")
+	const fileInfo = document.getElementById("fileInfo")
+	const currentImage = document.getElementById("currentImage")
+	const completionMessage = document.getElementById("completionMessage")
+	
+	// 清理图片预览资源
+	if (currentImage && currentImage.src && currentImage.src.startsWith('blob:')) {
+		URL.revokeObjectURL(currentImage.src)
+		currentImage.src = ''
+		currentImage.style.display = 'none'
+	}
+	
+	// 重置到初始状态：只显示文件选择按钮
+	if (fileInputWrapper) fileInputWrapper.style.display = 'flex'
+	if (fileInput) {
+		fileInput.disabled = false
+		fileInput.value = "" // 清空文件选择
+	}
+	// 重置按钮状态和样式
+	if (startBtn) {
+		startBtn.hidden = true
+		startBtn.disabled = false
+		startBtn.textContent = "Save and Export"
+		startBtn.style.opacity = "1"
+		startBtn.style.cursor = "pointer"
+	}
+	if (cancelBtn) {
+		cancelBtn.hidden = true
+		cancelBtn.disabled = false
+		cancelBtn.style.opacity = "1"
+		cancelBtn.style.cursor = "pointer"
+	}
+	if (progressContainer) progressContainer.hidden = true
+	if (fileInfo) fileInfo.style.display = 'none'
+	if (completionMessage) completionMessage.style.display = 'none'
+	
+	// 清空选择的文件
+	window.selectedFile = null
+}
+
+// 将单页渲染为 PNG Blob（释放 WASM 内存后编码）
+async function renderPageToPNGBlob(pdf, i) {
+	let dpr = Math.min(window.devicePixelRatio || 1, 2)
+	for (let attempt = 0; attempt < 2; attempt++) {
+		const z = (attempt === 0 ? dpr : 1) * 96 / 72
+		let page = null
+		let pixmap = null
+		try {
+			page = pdf.loadPage(i)
+			pixmap = page.toPixmap([z, 0, 0, z, 0, 0], mupdf.ColorSpace.DeviceRGB, true, true)
+			const width = pixmap.getWidth()
+			const height = pixmap.getHeight()
+			const pixels = pixmap.getPixels().slice()
+			pixmap.destroy(); pixmap = null
+			page.destroy(); page = null
+
+			let blob
+			if (typeof OffscreenCanvas !== "undefined") {
+				const off = new OffscreenCanvas(width, height)
+				const ctx = off.getContext("2d")
+				const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height)
+				ctx.putImageData(imageData, 0, 0)
+				blob = await off.convertToBlob({ type: "image/png" })
+				// 显示当前处理的图片预览
+				updateImagePreview(off)
+			} else {
+				const canvas = document.createElement("canvas")
+				canvas.width = width
+				canvas.height = height
+				const ctx = canvas.getContext("2d")
+				const imageData = ctx.createImageData(width, height)
+				imageData.data.set(pixels)
+				ctx.putImageData(imageData, 0, 0)
+				blob = await new Promise(res => canvas.toBlob(res, "image/png"))
+				// 显示当前处理的图片预览
+				updateImagePreview(canvas)
+			}
+			return blob
+		} catch (e) {
+			try { if (pixmap) pixmap.destroy() } catch {}
+			try { if (page) page.destroy() } catch {}
+			if (attempt === 0) { await new Promise(r => setTimeout(r, 0)); continue }
+			throw e
+		}
+	}
+}
+
+// 更新图片预览（注意资源回收）
+function updateImagePreview(canvas) {
+	const currentImage = document.getElementById("currentImage")
+	if (!currentImage) return
+	
+	// 清理之前的 URL（避免内存泄漏）
+	if (currentImage.src && currentImage.src.startsWith('blob:')) {
+		URL.revokeObjectURL(currentImage.src)
+	}
+	
+	// 处理 OffscreenCanvas 和普通 Canvas 的兼容性
+	if (canvas instanceof OffscreenCanvas) {
+		// OffscreenCanvas 使用 convertToBlob 方法
+		canvas.convertToBlob({ type: 'image/png', quality: 0.8 }).then(blob => {
+			if (blob) {
+				const url = URL.createObjectURL(blob)
+				currentImage.src = url
+				currentImage.style.display = 'block'
+				// 设置定时器清理 URL（5秒后）
+				setTimeout(() => {
+					URL.revokeObjectURL(url)
+				}, 5000)
+			}
+		}).catch(err => {
+			console.warn('OffscreenCanvas convertToBlob failed:', err)
+		})
+	} else {
+		// 普通 Canvas 使用 toBlob 方法
+		canvas.toBlob(blob => {
+			if (blob) {
+				const url = URL.createObjectURL(blob)
+				currentImage.src = url
+				currentImage.style.display = 'block'
+				// 设置定时器清理 URL（5秒后）
+				setTimeout(() => {
+					URL.revokeObjectURL(url)
+				}, 5000)
+			}
+		}, 'image/png', 0.8)
+	}
+}
+
+async function exportZipStreamFromFile(file, baseName) {
+	if (exportCtrl.running) {
+		alert("An export task is already in progress. Please cancel or wait for completion.")
+		return
+	}
+	const cancelBtn = document.getElementById("cancelBtn")
+	const fileInput = document.getElementById("fileInput")
+	try {
+		setStatus("Preparing export...")
+		setProgress(0, 100)
+		cancelBtn.hidden = false
+		if (fileInput) fileInput.disabled = true
+
+		// 选择输出目标：优先使用 File System Access API，其次使用 StreamSaver
+		let writable
+		let sink = ""
+		if ("showSaveFilePicker" in window) {
+			const handle = await window.showSaveFilePicker({
+				suggestedName: `${baseName}-images.zip`,
+				types: [{ description: "ZIP Archive", accept: { "application/zip": [".zip"] } }]
+			})
+			const fsWritable = await handle.createWritable()
+			writable = {
+				write: (chunk) => fsWritable.write(chunk),
+				close: () => fsWritable.close(),
+				abort: () => fsWritable.abort()
+			}
+			sink = "fsa"
+		} else if (window.streamSaver && streamSaver.createWriteStream) {
+			try { if (!streamSaver.mitm) streamSaver.mitm = new URL('./mitm.html?version=2.0.0', location).href } catch {}
+			const fileStream = streamSaver.createWriteStream(`${baseName}-images.zip`)
+			const writer = fileStream.getWriter()
+			writable = {
+				write: (chunk) => writer.write(chunk),
+				close: () => writer.close(),
+				abort: (reason) => writer.abort(reason || "aborted")
+			}
+			sink = "streamsaver"
+		} else {
+			throw new Error("Your browser doesn't support local streaming save or StreamSaver fallback. Please try using Chrome/Edge or a supported browser.")
+		}
+
+		exportCtrl.running = true
+		exportCtrl.cancel = false
+		exportCtrl.writable = writable
+		exportCtrl.reader = null
+
+		if (sink === "streamsaver") setStatus("Using StreamSaver for streaming download...")
+
+		const data = await file.arrayBuffer()
+		const pdf = mupdf.Document.openDocument(data, file.name)
+		const n = pdf.countPages()
+		setProgress(0, n)
+		const digits = Math.max(3, String(n).length)
+
+		const zip = new Zip(async (err, chunk, final) => {
+			if (err) throw err
+			if (exportCtrl.cancel) return
+			await writable.write(chunk)
+			if (final) await writable.close()
+		})
+		exportCtrl.zip = zip
+
+		for (let i = 0; i < n; i++) {
+			if (exportCtrl.cancel) break
+			setStatus(`Processing page ${i + 1}/${n}`)
+			const blob = await renderPageToPNGBlob(pdf, i)
+			if (exportCtrl.cancel) break
+			const name = `${baseName}-page-${String(i + 1).padStart(digits, "0")}.png`
+			const entry = new AsyncZipDeflate(name, { level: 6 })
+			zip.add(entry)
+			const reader = blob.stream().getReader()
+			exportCtrl.reader = reader
+			for (;;) {
+				if (exportCtrl.cancel) { try { await reader.cancel() } catch {}; break }
+				const { done, value } = await reader.read()
+				if (done) break
+				entry.push(value, false)
+			}
+			entry.push(new Uint8Array(0), true)
+			exportCtrl.reader = null
+			setProgress(i + 1, n)
+			// 更新进度文本显示当前处理状态
+			if (i + 1 < n) {
+				setStatus(`Processing page ${i + 2}/${n}`)
+			} else {
+				setStatus(`Processing complete, ${n} pages total`)
+			}
+			await new Promise(r => setTimeout(r, 0))
+		}
+		zip.end()
+		setStatus(exportCtrl.cancel ? "Cancelling..." : "Finalizing...")
+		try { pdf.destroy && pdf.destroy() } catch {}
+		if (!exportCtrl.cancel) {
+			setStatus(`Export complete! ${n} pages processed`)
+			setProgress(n, n)
+			// 显示完成提示
+			showCompletionMessage(`${baseName}-images.zip`, n)
+		}
+	} catch (e) {
+		if (exportCtrl.cancel) {
+			setStatus("Export cancelled")
+		} else {
+			console.error("EXPORT ERROR", e)
+			setStatus("Export failed: " + (e && e.message ? e.message : e))
+		}
+	} finally {
+		try {
+			if (exportCtrl.cancel) {
+				try { if (exportCtrl.reader) await exportCtrl.reader.cancel() } catch {}
+				try { if (exportCtrl.writable) await exportCtrl.writable.abort() } catch {}
+			}
+		} finally {
+			exportCtrl.running = false
+			exportCtrl.cancel = false
+			exportCtrl.reader = null
+			exportCtrl.writable = null
+			exportCtrl.zip = null
+			
+			// 重置按钮状态（仅在导出完成时需要，Cancel时已在cancelExport中处理）
+			if (!exportCtrl.cancel) {
+				const startBtn = document.getElementById("startBtn")
+				const cancelBtn = document.getElementById("cancelBtn")
+				if (startBtn) {
+					startBtn.disabled = false
+					startBtn.textContent = "Save and Export"
+					startBtn.style.opacity = "1"
+					startBtn.style.cursor = "pointer"
+				}
+				if (cancelBtn) {
+					cancelBtn.disabled = false
+					cancelBtn.style.opacity = "1"
+					cancelBtn.style.cursor = "pointer"
+				}
+			}
+		}
+	}
+}
+
+window.cancelExport = async function cancelExport() {
+	if (!exportCtrl.running) {
+		// 如果没有正在运行的导出，则重置到初始状态
+		resetAfterExport()
+		return
+	}
+	exportCtrl.cancel = true
+	// 直接重置到初始状态，不显示"正在Cancel"状态
+	try { if (exportCtrl.reader) await exportCtrl.reader.cancel() } catch {}
+	try { if (exportCtrl.writable) await exportCtrl.writable.abort() } catch {}
+	resetAfterExport()
+}
+
+// 显示完成提示信息
+function showCompletionMessage(fileName, pageCount) {
+	const completionMessage = document.getElementById("completionMessage")
+	const exportFileName = document.getElementById("exportFileName")
+	const startBtn = document.getElementById("startBtn")
+	const cancelBtn = document.getElementById("cancelBtn")
+	
+	if (exportFileName) {
+		exportFileName.textContent = `File saved as: ${fileName} (${pageCount} pages converted)`
+	}
+	
+	// 隐藏保存和取消按钮
+	if (startBtn) startBtn.style.display = 'none'
+	if (cancelBtn) cancelBtn.style.display = 'none'
+	
+	if (completionMessage) {
+		completionMessage.style.display = 'block'
+		// 不再自动隐藏，等待用户点击Confirm
+	}
+}
+
+// 用户点击Confirm按钮后的处理
+window.confirmCompletion = function confirmCompletion() {
+	const completionMessage = document.getElementById("completionMessage")
+	if (completionMessage) {
+		completionMessage.style.display = 'none'
+	}
+	// 重置到初始状态
+	resetAfterExport()
+}
+
+// 拖拽功能初始化
+document.addEventListener('DOMContentLoaded', function() {
+	const dropZone = document.getElementById('dropZone')
+	const fileInput = document.getElementById('fileInput')
+	
+	if (!dropZone || !fileInput) return
+	
+	// 点击拖拽区域触发文件选择
+	dropZone.addEventListener('click', function(e) {
+		if (e.target === dropZone || e.target.closest('.file-input-wrapper')) {
+			fileInput.click()
+		}
+	})
+	
+	// 拖拽事件处理
+	;['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+		dropZone.addEventListener(eventName, preventDefaults, false)
+		document.body.addEventListener(eventName, preventDefaults, false)
+	})
+	
+	;['dragenter', 'dragover'].forEach(eventName => {
+		dropZone.addEventListener(eventName, highlight, false)
+	})
+	
+	;['dragleave', 'drop'].forEach(eventName => {
+		dropZone.addEventListener(eventName, unhighlight, false)
+	})
+	
+	dropZone.addEventListener('drop', handleDrop, false)
+	
+	function preventDefaults(e) {
+		e.preventDefault()
+		e.stopPropagation()
+	}
+	
+	function highlight(e) {
+		dropZone.classList.add('drag-over')
+	}
+	
+	function unhighlight(e) {
+		dropZone.classList.remove('drag-over')
+	}
+	
+	function handleDrop(e) {
+		const dt = e.dataTransfer
+		const files = dt.files
+		
+		if (files.length > 0) {
+			const file = files[0]
+			if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+				openFile(file)
+			} else {
+				alert('Please select a PDF file')
+			}
+		}
+	}
+})
+
+</script>
+
+<body>
+	<div class="container">
+		<div id="toolbar">
+			<div class="drop-zone" id="dropZone">
+				<div class="file-input-wrapper" id="fileInputWrapper">
+					<input id="fileInput" type="file" accept=".pdf,.xps,application/pdf" onchange="openFile(event.target.files[0])">
+					<label for="fileInput" class="file-input-label">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14,2 14,8 20,8"></polyline>
+							<line x1="16" y1="13" x2="8" y2="13"></line>
+							<line x1="16" y1="17" x2="8" y2="17"></line>
+							<polyline points="10,9 9,9 8,9"></polyline>
+						</svg>
+						Select PDF File
+					</label>
+					<div class="drop-hint">or drag and drop PDF file here</div>
+				</div>
+				
+				<div id="fileInfo" style="display: none; text-align: center; margin: 0; padding: 8px 16px; background: transparent; border: none; width: 100%; max-width: 320px; box-sizing: border-box;">
+				<span id="fileName" style="font-size: 14px; color: #333; font-weight: 500;"></span>
+			</div>
+				
+				<div id="progressContainer" hidden>
+					<div id="previewContainer">
+						<img id="currentImage" alt="Current processing image">
+						<div id="progressInfo">
+							<progress id="progress" value="0" max="100"></progress>
+							<span id="progressText">0/0 pages</span>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Export and Cancel buttons, located at the bottom of the dashed box -->
+				<div class="action-buttons" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 5;">
+					<button id="startBtn" onclick="startExport()" hidden style="padding: 8px 16px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3); display: flex; align-items: center;">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+							<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+							<polyline points="7,10 12,15 17,10"></polyline>
+							<line x1="12" y1="15" x2="12" y2="3"></line>
+						</svg>
+						Save and Export
+					</button>
+					<button id="cancelBtn" onclick="cancelExport()" hidden style="padding: 8px 16px; background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(108, 117, 125, 0.3); display: flex; align-items: center;">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+						Cancel
+					</button>
+				</div>
+				
+				<!-- Success message box, displayed in the center of the dashed box -->
+				<div id="completionMessage" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; padding: 24px 32px; background: linear-gradient(135deg, #d4edda 0%, #ffffff 100%); border: 1px solid #c3e6cb; border-radius: 12px; color: #155724; box-shadow: 0 8px 24px rgba(21, 87, 36, 0.2); max-width: 90%; min-width: 280px;">
+					<div style="font-size: 18px; font-weight: 600; margin-bottom: 12px;">✅ Conversion Complete!</div>
+					<div id="exportFileName" style="font-size: 14px; color: #0d4419; line-height: 1.5; margin-bottom: 16px;"></div>
+					<button onclick="confirmCompletion()" style="padding: 10px 24px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(40, 167, 69, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(40, 167, 69, 0.3)'">
+						Confirm
+					</button>
+				</div>
+			</div>
+
+			
+	
+		</div>
+		
+		<div id="log" aria-live="polite"></div>
+	</div>
+</body>
+
+</html>
